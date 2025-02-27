@@ -28,6 +28,9 @@ from app import config
 
 import json
 
+from typing_extensions import Annotated
+from pydantic import BaseModel
+
 
 
 router = APIRouter()
@@ -43,12 +46,71 @@ uploaded_jd_files = {}
 
 
 
-@router.post("/upload-jds", summary="Upload multiple JD files")
-async def upload_jds(files: List[UploadFile] = File(...)):
+class UploadResponse(BaseModel):
+    """Response model for file upload endpoints"""
+    status: str
+    message: str
+    data: dict
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "status": "success",
+                "message": "Successfully uploaded 2 files",
+                "data": {
+                    "uploaded_files": ["jd1.pdf", "jd2.docx"],
+                    "errors": [],
+                    "criteria": {
+                        "jd1.pdf": {
+                            "criteria": ["Python", "Machine Learning", "SQL"]
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+@router.post(
+    "/upload-jds",
+    response_model=UploadResponse,
+    summary="Upload multiple JD files",
+    description="Upload multiple Job Description files (PDF/DOCX format) and extract scoring criteria.",
+    response_description="Returns a list of uploaded file names and extracted criteria"
+)
+async def upload_jds(
+    files: Annotated[
+        List[UploadFile],
+        File(
+            description="Multiple JD files to upload (PDF/DOCX format)",
+            example=["senior_ml_engineer.pdf", "data_scientist.docx"]
+        )
+    ]
+):
     """
-    Upload multiple JD files (PDF or DOCX format).
+    Upload multiple Job Description (JD) files and extract scoring criteria.
     
-    Returns a list of uploaded file names and extracted criteria.
+    The endpoint will:
+    - Accept multiple PDF/DOCX files
+    - Save files to the JD directory
+    - Extract text content from files
+    - Analyze JDs to identify key requirements
+    - Return extracted criteria for each JD
+    
+    Parameters:
+    - files: List of files to upload (PDF/DOCX format)
+    
+    Returns:
+    - status: Success/error status
+    - message: Operation result message
+    - data: Dictionary containing:
+        - uploaded_files: List of successfully uploaded files
+        - errors: List of any errors encountered
+        - criteria: Dictionary of extracted criteria for each JD
+    
+    Raises:
+    - 400: No files provided or invalid file format
+    - 500: Server error during processing
     """
     global uploaded_jd_files
     
@@ -124,12 +186,48 @@ async def upload_jds(files: List[UploadFile] = File(...)):
 
 
 
-@router.post("/upload-resumes", summary="Upload multiple resume files and score against all JDs")
-async def upload_resumes(files: List[UploadFile] = File(...)):
+@router.post(
+    "/upload-resumes",
+    response_model=UploadResponse,
+    summary="Upload and score multiple resume files",
+    description="Upload multiple resume files and score them against previously uploaded JDs.",
+    response_description="Returns upload status, scoring results and Excel report path"
+)
+async def upload_resumes(
+    files: Annotated[
+        List[UploadFile],
+        File(
+            description="Multiple resume files to upload (PDF/DOCX format)",
+            example=["john_doe_resume.pdf", "jane_smith_resume.docx"]
+        )
+    ]
+):
     """
-    Upload multiple resume files (PDF or DOCX format) and score them against all JDs.
+    Upload multiple resume files and score them against previously uploaded JDs.
     
-    Returns a list of uploaded file names and scoring results.
+    The endpoint will:
+    - Accept multiple PDF/DOCX files
+    - Save files to the resume directory
+    - Extract text content from files
+    - Score each resume against all uploaded JDs
+    - Generate an Excel report with detailed scores
+    
+    Parameters:
+    - files: List of files to upload (PDF/DOCX format)
+    
+    Returns:
+    - status: Success/error status
+    - message: Operation result message
+    - data: Dictionary containing:
+        - uploaded_files: List of successfully uploaded files
+        - errors: List of any errors encountered
+        - scoring_results: Dictionary of scoring results
+        - export: Excel report details
+    
+    Raises:
+    - 400: No files provided or invalid file format
+    - 404: No JDs found for scoring
+    - 500: Server error during processing
     """
     global uploaded_jd_files
     
