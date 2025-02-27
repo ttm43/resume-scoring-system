@@ -1,6 +1,7 @@
 # Resume Scoring System
 
 An AI-powered resume scoring system that automatically evaluates resumes based on job descriptions (JDs) and generates scoring reports.
+video link:https://youtu.be/CQJwSjg-lCc
 
 ## Features
 
